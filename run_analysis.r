@@ -34,3 +34,5 @@ data.tidy <- aggregate( data.all[,3] ~ subject+Label, data = data.all, FUN= "mea
 
 #Write data to file for final assignment
 write.table(data.tidy, "final.txt" , sep = ";")
+
+print(data.tidy)
