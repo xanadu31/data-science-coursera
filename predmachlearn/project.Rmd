@@ -1,0 +1,78 @@
+Predicting patterns of Dumbbell Biceps Curl in five different fashions
+========================================================
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+6 test subjects were asked to perform barbell lifts correctly and incorrectly in 5 different ways. In this project, the goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of these 6 participants to predict how they were doing the excercise. 
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+
+
+```{r echo=FALSE,results='hide'}
+library(caret)
+library(party)
+set.seed(4321432) # Set seed for reproducability
+```
+
+# Data
+Data is supplied by Groupware@LES. Both a training dataset and a final test dataset is available. In order to avoid fitting the model to the final testing set the training set is splitted into a train (60%) and test (40%) set.
+
+```{r cache = TRUE}
+data.train <- read.csv("pml-training.csv")
+data.test <- read.csv("pml-testing.csv")
+
+trainIndex <- createDataPartition(data.train$classe, list=FALSE, p=.6)
+train.train = data.train[trainIndex,]
+train.test = data.train[-trainIndex,]
+```
+
+## Cleaning Data
+A quick glance on the summary of the datasets shows that the data isn't very tidy. There are numerous empty or NA values. Variables containing many NA or empty values will be removed from the dataset. Also variables that do not offer any predictive value such as the user_name, X (ID column) and the various time-related variables will be removed .
+
+```{r}
+removeColumns <- sapply(train.train, function(x) {
+  sum(is.na(x)) || sum(!is.na(x) & x=="")
+})
+
+train.train  <- train.train[!removeColumns]
+
+train.train <- train.train[,!(names(train.train) %in% c("X","user_name","raw_timestamp_part_1","raw_timestamp_part_2","cvtd_timestamp"))]
+
+```
+
+# Prediction model
+For building a prediction model the caret package is used. The algorithm which will be used is the random forest algorithm since they are quite fast and usually provide very good results.. 
+
+```{r, cache=TRUE, warning=FALSE}
+model <- train(classe ~ ., data=train.train, method="rf", ntree=75)
+model
+```
+
+
+# Model evaluation
+The model is evaluated by calculating the in sample prediction accuracy (on the 60% splitted part of the training set)
+```{r}
+prediction.inSample <- predict(model, train.train) 
+mean(prediction.inSample == train.train$classe)
+```
+
+and by calculating the prediction accuracy on the out of sample test split (the other 40% of the supplied training data)
+```{r}
+prediction.outSample <- predict(model, train.test) 
+mean(prediction.outSample == train.test$classe)
+```
+
+We can see that the model performance is very good. It achieves 99% acuracy on the out of sample dataset.
+
+## Confusion Matrix: 
+```{r}
+confusionMatrix(train.test$classe, prediction.outSample)
+```
+
+# Test dataset
+
+```{r, warning=FALSE}
+result <- predict(model, data.test)
+result
+```
